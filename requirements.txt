@@ -1,0 +1,6 @@
+python-telegram-bot>=20.0
+requests>=2.28.0
+urllib3>=1.26.0
+certifi
+idna
+charset-normalizer
