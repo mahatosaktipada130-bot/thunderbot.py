@@ -1,4 +1,5 @@
 import os
+import threading
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -10,12 +11,16 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# --- Flask Web Server Setup (Gunicorn ke liye) ---
+# --- Web Server (Render Port Binding Error Se Bachne Ke Liye) ---
 app_flask = Flask(__name__)
 
 @app_flask.route('/')
 def home():
-    return "Bot is alive and running!"
+    return "Bot is active!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app_flask.run(host="0.0.0.0", port=port)
 
 # --- Telegram Bot Logic ---
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -154,11 +159,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    # Flask Server Start In Background
+    threading.Thread(target=run_flask, daemon=True).start()
     
+    # Start Telegram Bot
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(CallbackQueryHandler(button_callback))
     
     print("Bot is running...")
     app.run_polling()
+
