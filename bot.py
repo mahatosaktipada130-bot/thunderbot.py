@@ -1,5 +1,4 @@
 import os
-import threading
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -11,22 +10,17 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# --- Flask Server Setup (Render Port Binding Ke Liye) ---
+# --- Flask Web Server Setup (Gunicorn ke liye) ---
 app_flask = Flask(__name__)
 
 @app_flask.route('/')
 def home():
     return "Bot is alive and running!"
 
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app_flask.run(host="0.0.0.0", port=port)
-
 # --- Telegram Bot Logic ---
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 user_files = {}
 
-# Colorful Keyboard Buttons Function
 def get_main_keyboard():
     keyboard = [
         [
@@ -71,7 +65,6 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = await context.bot.get_file(doc.file_id)
     file_bytes = await file.download_as_bytearray()
     
-    # Read text lines and remove duplicates
     content = file_bytes.decode("utf-8", errors="ignore")
     count_before = len(user_files[user_id])
     
@@ -135,7 +128,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
-        # Cleanup
         if os.path.exists(output_filename):
             os.remove(output_filename)
         user_files[user_id].clear()
@@ -143,7 +135,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "reset":
         user_files[user_id].clear()
         await query.message.reply_text(
-            "🗑 **Reset Successful!** Purana saara data clear ho gaya hai. Ab nayi files bhej sakte ho.",
+            "🗑 **Reset Successful!** Purana saara data clear ho gaya hai.",
             parse_mode="Markdown",
             reply_markup=get_main_keyboard()
         )
@@ -153,8 +145,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ℹ️ **Kaise Use Karein?**\n\n"
             "1️⃣ Bot ko ek ya ek se zyada `.txt` files bhejein.\n"
             "2️⃣ Bot automatic saare duplicates hata kar save kar lega.\n"
-            "3️⃣ **⚡ Merge & Download** button par click karke final file lein.\n"
-            "4️⃣ Naye sir se start karne ke liye **🗑 Reset** dabayein."
+            "3️⃣ **⚡ Merge & Download** button par click karke final file lein."
         )
         await query.message.reply_text(
             help_text, 
@@ -163,15 +154,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 if __name__ == "__main__":
-    # Flask ko background thread par run karein
-    threading.Thread(target=run_flask, daemon=True).start()
-
-    # Telegram bot app start karein
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(CallbackQueryHandler(button_callback))
     
-    print("Bot with Buttons and Flask server is running...")
+    print("Bot is running...")
     app.run_polling()
