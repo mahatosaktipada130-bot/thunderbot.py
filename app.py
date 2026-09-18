@@ -10,7 +10,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 app = Flask(__name__)
 
 # --- TELEGRAM BOT CONFIGURATION ---
-# Telegram Bot Token yahan dale (@BotFather se mila hua)
 BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN_HERE") 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -150,14 +149,33 @@ def run_spin_cmd(message):
     else:
         bot.reply_to(message, f"❌ **Error:** {res.get('error', 'Unknown Error')}")
 
+# --- BACKGROUND THREADS ---
 def start_bot():
-    bot.polling(non_stop=True)
+    while True:
+        try:
+            print("Starting Bot Polling...")
+            bot.polling(non_stop=True, timeout=60, long_polling_timeout=60)
+        except Exception as e:
+            print(f"Bot Polling Error: {e}")
+            time.sleep(5)
+
+def keep_alive():
+    # Render URL ko ping karke inactive hone se bachata hai
+    url = os.environ.get("RENDER_EXTERNAL_URL")
+    if not url:
+        return
+    while True:
+        time.sleep(600)  # Har 10 minute me ping karega
+        try:
+            requests.get(url, timeout=10)
+            print("Self-ping successful!")
+        except Exception as e:
+            print(f"Self-ping failed: {e}")
+
+# Threads ko global level par start kiya taaki Gunicorn ke under chal sake
+threading.Thread(target=start_bot, daemon=True).start()
+threading.Thread(target=keep_alive, daemon=True).start()
 
 if __name__ == "__main__":
-    # Start Bot in Background Thread
-    threading.Thread(target=start_bot, daemon=True).start()
-    
-    # Render binds dynamically using PORT environment variable
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
