@@ -1,6 +1,5 @@
-Flask
-requests
-urllib3
-blackboxprotobuf
 pyTelegramBotAPI
+requests
+beautifulsoup4
+flask
 gunicorn
