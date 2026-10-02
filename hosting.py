@@ -15,8 +15,9 @@ import signal
 import html as html_mod
 from datetime import datetime, timedelta
 from telebot import TeleBot, types
+from flask import Flask
 
-# ==================== RAILWAY / ENV CONFIG ====================
+# ==================== RAILWAY / RENDER CONFIG ====================
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8959750104:AAHw7JF8ZoaCiU3NCGvtoWyDCY9K18YRveI")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", 5427735251))
 OWNER_NAME = "RUSHERKING"
@@ -65,6 +66,22 @@ EMOJI_IDS = dict(DEFAULT_EMOJI)
 os.makedirs(HOST_DIR, exist_ok=True)
 bot = TeleBot(BOT_TOKEN, threaded=True, num_threads=50)
 waiting_states = {}
+
+# ==================== RENDER KEEP-ALIVE SERVER ====================
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is active and running smoothly!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = threading.Thread(target=run_web)
+    t.daemon = True
+    t.start()
 
 # ==================== DATABASE ====================
 def get_db():
@@ -725,4 +742,9 @@ if __name__ == '__main__':
     print(f"👑 {OWNER_NAME}")
     print(f"⚡ {brand()} v5.2 (Free & Direct Mode)")
     print(f"✅ Admin ID: {ADMIN_ID}")
+    
+    # Render web server start karein taaki app sleep na kare
+    keep_alive()
+    
+    # Telegram bot infinity polling start karein
     bot.infinity_polling(skip_pending=True, timeout=20, long_polling_timeout=10)
